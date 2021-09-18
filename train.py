@@ -24,11 +24,11 @@ parser.add_argument('--exp', default='debug', type=str, help='experiment name')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--epochs', default=300, type=int, help='epochs number')
 parser.add_argument('--riesz-gamma', default=1e-4, type=float, help='riesz loss weight')
-parser.add_argument('--resume', '-r', action='store_true',
-                    help='resume from checkpoint')
+parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
+parser.add_argument('--ada-alpha', action='store_true', help='apply adaptive alpha in riesz loss')
 args = parser.parse_args()
 
-exp_path = '../'+args.exp
+exp_path = '../exps/'+args.exp
 if not os.path.exists(exp_path):
     os.mkdir(exp_path)
 
@@ -69,12 +69,12 @@ transform_test = transforms.Compose([
 trainset = torchvision.datasets.CIFAR10(
     root='../data', train=True, download=True, transform=transform_train)
 trainloader = torch.utils.data.DataLoader(
-    trainset, batch_size=128, shuffle=True, num_workers=2)
+    trainset, batch_size=128, shuffle=True, num_workers=4)
 
 testset = torchvision.datasets.CIFAR10(
     root='../data', train=False, download=True, transform=transform_test)
 testloader = torch.utils.data.DataLoader(
-    testset, batch_size=100, shuffle=False, num_workers=2)
+    testset, batch_size=100, shuffle=False, num_workers=4)
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
@@ -82,7 +82,7 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
 # Model
 print('==> Building model..')
 
-net = ResNet18()
+net = ResNet18(args.ada_alpha)
 net = net.to(device)
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
@@ -104,39 +104,41 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[150, 225
 
 # Training
 def train(epoch, gamma):
-    #gamma = np.minimum(gamma, 10**(-5+epoch))
+    #if epoch < 10: gamma = 0
+
     logger.info('Epoch: %d' % epoch)
     net.train()
     train_ce_loss = 0
     train_riesz_loss = 0
     train_energy = 0
+    train_alpha = 0
     correct = 0
     total = 0
     tic = time.time()
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
-        outputs, riesz_losses, energies = net(inputs)
+        outputs, riesz_losses, energies, alphas = net(inputs)
         ce_loss = criterion(outputs, targets)
-        riesz_loss = torch.stack(riesz_losses).sum()
+        riesz_loss = torch.stack(riesz_losses).mean()
         loss = ce_loss + gamma * riesz_loss
         loss.backward()
         optimizer.step()
 
         train_ce_loss += ce_loss.item()
-        train_riesz_loss += gamma * riesz_loss.item()
+        train_riesz_loss += riesz_loss.item()
         train_energy += torch.stack(energies).mean()
+        train_alpha += torch.stack(alphas).mean()
         _, predicted = outputs.max(1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
     toc = time.time()
-    logger.info('TRAIN | CE_Loss: %.3f | Riesz_Loss: %.3f | Acc: %.3f%% (%d/%d) | Energy: %.3f | Time: %d s' % \
+    logger.info('TRAIN | CE_Loss: %.3f | Riesz_Loss: %.3f | Acc: %.3f%% (%d/%d) | Energy: %.3f | Alpha: %.2f | Time: %d s' % \
             (train_ce_loss/(batch_idx+1), train_riesz_loss/(batch_idx+1), 100.*correct/total, correct, total,\
-            train_energy/(batch_idx+1), toc-tic))
+            train_energy/(batch_idx+1), train_alpha/(batch_idx+1), toc-tic))
 
-def test(epoch, gamma):
-    #gamma = np.minimum(gamma, 10**(-5+epoch))
+def test(epoch):
     global best_acc
     net.eval()
     test_ce_loss = 0
@@ -147,12 +149,12 @@ def test(epoch, gamma):
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(testloader):
             inputs, targets = inputs.to(device), targets.to(device)
-            outputs, riesz_losses, _ = net(inputs)
+            outputs, riesz_losses, _, _ = net(inputs)
             ce_loss = criterion(outputs, targets)
-            riesz_loss = torch.stack(riesz_losses).sum()
+            riesz_loss = torch.stack(riesz_losses).mean()
 
             test_ce_loss += ce_loss.item()
-            test_riesz_loss += gamma * riesz_loss.item()
+            test_riesz_loss += riesz_loss.item()
             _, predicted = outputs.max(1)
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
@@ -176,5 +178,5 @@ def test(epoch, gamma):
 
 for epoch in range(start_epoch, start_epoch+args.epochs):
     train(epoch, gamma=args.riesz_gamma)
-    test(epoch, gamma=args.riesz_gamma)
+    test(epoch)
     scheduler.step()
