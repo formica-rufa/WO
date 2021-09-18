@@ -29,7 +29,7 @@ class RieszConv2d(nn.Module):
         super(RieszConv2d, self).__init__()
         self.conv = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.ada_alpha = ada_alpha
-        self.alpha = nn.Parameter(torch.tensor(1., requires_grad=True)).cuda()
+        self.alpha = nn.Parameter(torch.tensor(1., requires_grad=True).cuda())
 
     def forward(self, x):
         x_hat = x.clone().detach()

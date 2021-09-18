@@ -19,13 +19,17 @@ import sys
 from models.riesz_resnet import ResNet18
 from utils import progress_bar
 
+from RandAugment.augmentations import *
+
+
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--exp', default='debug', type=str, help='experiment name')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--epochs', default=300, type=int, help='epochs number')
 parser.add_argument('--riesz-gamma', default=1e-4, type=float, help='riesz loss weight')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-parser.add_argument('--ada-alpha', action='store_true', help='apply adaptive alpha in riesz loss')
+parser.add_argument('--ada-alpha', '-aa', action='store_true', help='apply adaptive alpha in riesz loss')
+parser.add_argument('--rand-aug', '-ra', action='store_true', help='apply RandAugment')
 args = parser.parse_args()
 
 exp_path = '../exps/'+args.exp
@@ -60,6 +64,9 @@ transform_train = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
+
+if args.rand_aug:
+    transform_train.transforms.insert(0, RandAugment(n=3, m=5))
 
 transform_test = transforms.Compose([
     transforms.ToTensor(),
