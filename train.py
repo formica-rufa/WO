@@ -16,14 +16,15 @@ import time
 import logging
 import sys
 
-from models.riesz_resnet import ResNet18
-from utils import progress_bar
+from models.resnet import ResNet18
+from models.cnn import CNN
 
-from RandAugment.augmentations import *
+from RA.augmentations import *
 
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--exp', default='debug', type=str, help='experiment name')
+parser.add_argument('--backbone', default='R18', type=str, help='backbone architecture')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--epochs', default=300, type=int, help='epochs number')
 parser.add_argument('--riesz-gamma', default=1e-4, type=float, help='riesz loss weight')
@@ -88,8 +89,15 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
 
 # Model
 print('==> Building model..')
+print('==> {} backbone.'.format(args.backbone))
+if args.backbone == 'R18':
+    net = ResNet18(args.ada_alpha)
+elif args.backbone[:3] == 'CNN':
+    num_layers = int(args.backbone[3:])
+    net = CNN(num_layers, args.ada_alpha)
+else:
+    raise Exception('Unknown backbone architecture!')
 
-net = ResNet18(args.ada_alpha)
 net = net.to(device)
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
