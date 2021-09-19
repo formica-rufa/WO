@@ -10,23 +10,25 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from common import *
+from models.common import *
 
 
 class CascadeConvBlock(nn.Module):
     def __init__(self, cascade_depth, in_planes, planes, ada_alpha=False):
         super(CascadeConvBlock, self).__init__()
-        self.convs = [RieszConv2d(in_planes, planes, kernel_size=3, stride=1, padding=1, bias=False, ada_alpha=ada_alpha)]
+        convs = [RieszConv2d(in_planes, planes, kernel_size=3, stride=1, padding=1, bias=False, ada_alpha=ada_alpha)]
         for _ in range(cascade_depth-1):
             conv = RieszConv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False, ada_alpha=ada_alpha)
-            self.convs.append(conv)
+            convs.append(conv)
+        self.convs = nn.Sequential(*convs)
+        self.bns = nn.Sequential(*[nn.BatchNorm2d(planes) for _ in range(cascade_depth)])
         self.pool = nn.MaxPool2d(2, stride=2)
 
     def forward(self, x):
         riesz_losses, energies, alphas = [], [], []
-        for conv in self.convs:
-            x, rloss, energy, alpha = self.conv1(x)
-            x = F.relu(x)
+        for conv, bn in zip(self.convs, self.bns):
+            x, rloss, energy, alpha = conv(x)
+            x = F.relu(bn(x))
             riesz_losses.append(rloss)
             energies.append(energy)
             alphas.append(alpha)
@@ -60,8 +62,3 @@ class CNN(nn.Module):
         energies = energy1 + energy2 + energy3
         alphas = alpha1 + alpha2 + alpha3
         return x, riesz_losses, energies, alphas
-
-
-def CNN(num_layers, ada_alpha=False):
-    assert num_layers % 3 == 0
-    return CNN(num_layers//3, ada_alpha=ada_alpha)

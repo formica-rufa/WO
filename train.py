@@ -94,7 +94,8 @@ if args.backbone == 'R18':
     net = ResNet18(args.ada_alpha)
 elif args.backbone[:3] == 'CNN':
     num_layers = int(args.backbone[3:])
-    net = CNN(num_layers, args.ada_alpha)
+    assert num_layers % 3 == 0
+    net = CNN(num_layers//3, ada_alpha=ada_alpha)
 else:
     raise Exception('Unknown backbone architecture!')
 

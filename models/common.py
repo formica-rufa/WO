@@ -11,7 +11,7 @@ def hyperspherical_energy(conv, eps=1e-8):
     cos = normed_p.matmul(normed_p.T)
     l2distsq = 2 * (1 - cos)
     energy = torch.sum((1 - torch.eye(neuron_dim).cuda()) / (l2distsq + eps)) / (neuron_dim * (neuron_dim - 1))
-    return energy
+    return energy.detach()
 
 
 class RieszConv2d(nn.Module):
