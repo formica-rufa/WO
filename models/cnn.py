@@ -10,55 +10,44 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.common import *
-
 
 class CascadeConvBlock(nn.Module):
-    def __init__(self, cascade_depth, in_planes, planes, ada_alpha=False):
+    def __init__(self, cascade_depth, in_planes, planes):
         super(CascadeConvBlock, self).__init__()
-        convs = [RieszConv2d(in_planes, planes, kernel_size=3, stride=1, padding=1, bias=False, ada_alpha=ada_alpha)]
+        convs = [nn.Conv2d(in_planes, planes, kernel_size=3, stride=1, padding=1, bias=False)]
         for _ in range(cascade_depth-1):
-            conv = RieszConv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False, ada_alpha=ada_alpha)
+            conv = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
             convs.append(conv)
         self.convs = nn.Sequential(*convs)
         self.bns = nn.Sequential(*[nn.BatchNorm2d(planes) for _ in range(cascade_depth)])
         self.pool = nn.MaxPool2d(2, stride=2)
 
     def forward(self, x):
-        riesz_losses, energies, alphas = [], [], []
         for conv, bn in zip(self.convs, self.bns):
-            x, rloss, energy, alpha = conv(x)
+            x = conv(x)
             x = F.relu(bn(x))
-            riesz_losses.append(rloss)
-            energies.append(energy)
-            alphas.append(alpha)
         x = self.pool(x)
-        return x, riesz_losses, energies, alphas
+        return x
 
 
 class CNN(nn.Module):
-    def __init__(self, cascade_depth, num_classes=10, ada_alpha=False):
+    def __init__(self, cascade_depth, num_classes=10):
         super(CNN, self).__init__()
         
-        self.block1 = CascadeConvBlock(cascade_depth, 3, 64, ada_alpha=ada_alpha)
-        self.block2 = CascadeConvBlock(cascade_depth, 64, 128, ada_alpha=ada_alpha)
-        self.block3 = CascadeConvBlock(cascade_depth, 128, 256, ada_alpha=ada_alpha)
+        self.block1 = CascadeConvBlock(cascade_depth, 3, 64)
+        self.block2 = CascadeConvBlock(cascade_depth, 64, 128)
+        self.block3 = CascadeConvBlock(cascade_depth, 128, 256)
         self.feature_linear = nn.Linear(256*16, 256)
         self.linear = nn.Linear(256, num_classes)
 
     def forward(self, x):
-        x, rloss1, energy1, alpha1 = self.block1(x)
+        x = self.block1(x)
         x = F.relu(x)
-        x, rloss2, energy2, alpha2 = self.block2(x)
+        x = self.block2(x)
         x = F.relu(x)
-        x, rloss3, energy3, alpha3 = self.block3(x)
+        x = self.block3(x)
         x = F.relu(x)
-
         x = x.view(x.size(0), -1)
         x = F.relu(self.feature_linear(x))
         x = self.linear(x)
-
-        riesz_losses = rloss1 + rloss2 + rloss3
-        energies = energy1 + energy2 + energy3
-        alphas = alpha1 + alpha2 + alpha3
-        return x, riesz_losses, energies, alphas
+        return x

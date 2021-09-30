@@ -1,0 +1,27 @@
+EXP: 'debug'
+
+TRAIN:
+  BACKBONE: 'R34'
+  DATASET: 'cifar10'
+  SUBSET_RATIO: 1.0
+  EPOCHS: 200
+  LR: 0.01
+
+WEIGHTS_REGULARIZATION:
+  GAMMA: 0.01
+  SCHEDULER_MODE: None
+
+  MHE:
+    ENABLED: False
+  SO:
+    ENABLED: False
+  SRIP:
+    ENABLED: False
+  DDRL:
+    ENABLED: True
+    ALPHA: 0.01
+    BETA: 4.0
+  EIGRL:
+    ENABLED: False
+    ALPHA: 0.01
+    BETA: 4.0

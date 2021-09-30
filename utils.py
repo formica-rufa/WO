@@ -3,10 +3,12 @@
     - msr_init: net parameter initialization.
     - progress_bar: progress bar mimic xlua.progress.
 '''
+import yaml
 import os
 import sys
 import time
 import math
+from easydict import EasyDict as edict
 
 import torch.nn as nn
 import torch.nn.init as init
@@ -122,3 +124,9 @@ def format_time(seconds):
     if f == '':
         f = '0ms'
     return f
+
+def load_config(filename):
+    with open(filename, 'r') as f:
+        cfg = edict(yaml.load(f))
+    return cfg
+
