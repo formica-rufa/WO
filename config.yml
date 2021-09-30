@@ -9,7 +9,9 @@ TRAIN:
 
 WEIGHTS_REGULARIZATION:
   GAMMA: 0.01
-  SCHEDULER_MODE: None
+  SCHEDULER:
+    ENABLED: False
+    MODE: 'shortened'
 
   MHE:
     ENABLED: False

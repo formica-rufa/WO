@@ -26,7 +26,7 @@ from utils import load_config
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR Training')
 parser.add_argument('config', type=str, help='experiment config')
-parser.add_argiment('--gpu', type=int, default=0, help='gpu id')
+parser.add_argument('--gpu', type=int, default=0, help='gpu id')
 args = parser.parse_args()
 
 cfg = load_config(args.config)
@@ -78,7 +78,7 @@ if cfg.TRAIN.DATASET == 'cifar10':
         root='../data', train=True, download=True, transform=transform_train)
     testset = torchvision.datasets.CIFAR10(
         root='../data', train=False, download=True, transform=transform_test)
-elif cfg.TRAIN.DATASET = 'cifar100':
+elif cfg.TRAIN.DATASET == 'cifar100':
     num_classes = 100
     trainset = torchvision.datasets.CIFAR100(
         root='../data', train=True, download=True, transform=transform_train)
@@ -141,7 +141,7 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestone
 
 
 def reguralizer_scale_modifier(epoch, gamma, mode='shortened'):
-   stage_gammas = [gamma, 1e-5, 1e-6, 1e-8, 0]
+    stage_gammas = [gamma, 1e-5, 1e-6, 1e-8, 0]
     if mode == 'shortened':
         assert gamma == 0.1
         milestones = (cfg.TRAIN.EPOCHS * np.array([0.05, 0.075, 0.15, 0.25])).astype(int)
@@ -157,8 +157,8 @@ def reguralizer_scale_modifier(epoch, gamma, mode='shortened'):
 
 
 def train(epoch, gamma):
-    if cfg.WEIGHTS_REGULARIZATION.SCHEDULER_MODE is not None:
-        gamma = reguralizer_scale_modifier(epoch, gamma, cfg.WEIGHTS_REGULARIZATION.SCHEDULER_MODE)
+    if cfg.WEIGHTS_REGULARIZATION.SCHEDULER.ENABLED:
+        gamma = reguralizer_scale_modifier(epoch, gamma, cfg.WEIGHTS_REGULARIZATION.MODE)
 
     logger.info('Epoch: %d' % epoch)
     net.train()
@@ -191,8 +191,7 @@ def train(epoch, gamma):
     toc = time.time()
     if weights_reguralizer is not None:
         info = 'TRAIN | CE_Loss: %.3f | %s: %.3f | Acc: %.3f%% (%d/%d) | Time: %d s' % \
-                (train_ce_loss/(batch_idx+1), weights_loss_name, train_weights_loss/(batch_idx+1), 100.*correct/total, correct, total,\
-                train_energy/(batch_idx+1), train_alpha/(batch_idx+1), toc-tic)
+                (train_ce_loss/(batch_idx+1), weights_loss_name, train_weights_loss/(batch_idx+1), 100.*correct/total, correct, total, toc-tic)
     else:
         info = 'TRAIN | CE_Loss: %.3f | Acc: %.3f%% (%d/%d) | Time: %d s' % \
                 (train_ce_loss/(batch_idx+1),  100.*correct/total, correct, total, toc-tic)
