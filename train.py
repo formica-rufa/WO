@@ -18,7 +18,8 @@ import sys
 
 from models.resnet import ResNet18, ResNet34, ResNet50
 from models.cnn import CNN
-from models.common import *
+from regularization.baselines import *
+from regularization.frames import *
 
 #from RA.augmentations import *
 from utils import load_config
@@ -131,6 +132,9 @@ elif cfg.WEIGHTS_REGULARIZATION.DDRL.ENABLED:
 elif cfg.WEIGHTS_REGULARIZATION.EIGRL.ENABLED:
     weights_loss_name = 'EIGRL'
     weights_reguralizer = lambda x: eigs_RL(x, cfg.WEIGHTS_REGULARIZATION.EIGRL.ALPHA, cfg.WEIGHTS_REGULARIZATION.EIGRL.BETA)
+elif cfg.WEIGHTS_REGULARIZATION.TOEPDDRL.ENABLED:
+    weights_loss_name = 'TOEPDDRL'
+    weights_reguralizer = lambda x: eigs_RL(x, cfg.WEIGHTS_REGULARIZATION.TOEPDDRL.ALPHA, cfg.WEIGHTS_REGULARIZATION.TOEPDDRL.BETA)
 else:
     weights_reguralizer = None
 

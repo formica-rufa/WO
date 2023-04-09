@@ -20,10 +20,14 @@ WEIGHTS_REGULARIZATION:
   SRIP:
     ENABLED: False
   DDRL:
-    ENABLED: True
+    ENABLED: False
     ALPHA: 0.01
     BETA: 4.0
   EIGRL:
     ENABLED: False
     ALPHA: 0.01
     BETA: 4.0
+  TOEPDDRL:
+    ENABLED: True
+    ALPHA: 0.5
+    BETA: 2.0

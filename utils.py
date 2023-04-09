@@ -127,6 +127,6 @@ def format_time(seconds):
 
 def load_config(filename):
     with open(filename, 'r') as f:
-        cfg = edict(yaml.load(f))
+        cfg = edict(yaml.safe_load(f))
     return cfg
 
